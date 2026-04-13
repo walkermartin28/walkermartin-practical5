@@ -28,6 +28,9 @@ jobs:
           ssh ubuntu@$SERVER_IP << 'ENDSSH'
             set -e
 
+            # Set up environment
+            export PATH=$PATH:/usr/local/go/bin
+
             # Navigate to project directory
             cd /home/ubuntu/walkermartin-practical4 || exit 1
 
@@ -38,9 +41,16 @@ jobs:
             echo "Building Go backend..."
             cd backend
             go build -o sec-baseball-hub main.go
-            sudo systemctl restart sec-baseball-hub || echo "Service not yet created, will start manually"
-            sudo pkill -f sec-baseball-hub || true
-            nohup ./sec-baseball-hub > /var/log/sec-baseball-hub.log 2>&1 &
+
+            # Stop existing backend
+            pkill -9 -f sec-baseball-hub || true
+            sleep 1
+
+            # Start new backend
+            nohup ./sec-baseball-hub > backend.log 2>&1 &
+            sleep 2
+
+            echo "Backend started successfully"
             cd ..
 
             # Build and deploy frontend
