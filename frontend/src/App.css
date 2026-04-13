@@ -1,0 +1,38 @@
+.App {
+  text-align: center;
+}
+
+.App-header {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.coming-soon {
+  font-size: 1.5em;
+  color: #888;
+  margin: 1rem 0;
+}
+
+.api-status {
+  margin-top: 2rem;
+  padding: 1rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 0.9em;
+}
+
+.api-status p {
+  margin: 0;
+  color: #61dafb;
+}

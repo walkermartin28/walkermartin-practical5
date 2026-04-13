@@ -1,0 +1,56 @@
+name: Deploy to Lightsail
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to Lightsail
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+        run: |
+          # Setup SSH
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts
+
+          # Deploy via SSH
+          ssh ubuntu@$SERVER_IP << 'ENDSSH'
+            set -e
+
+            # Navigate to project directory
+            cd /home/ubuntu/walkermartin-practical4 || exit 1
+
+            # Pull latest code
+            git pull origin main
+
+            # Build and restart backend
+            echo "Building Go backend..."
+            cd backend
+            go build -o sec-baseball-hub main.go
+            sudo systemctl restart sec-baseball-hub || echo "Service not yet created, will start manually"
+            sudo pkill -f sec-baseball-hub || true
+            nohup ./sec-baseball-hub > /var/log/sec-baseball-hub.log 2>&1 &
+            cd ..
+
+            # Build and deploy frontend
+            echo "Building React frontend..."
+            cd frontend
+            npm install
+            npm run build
+            sudo rm -rf /var/www/html/*
+            sudo cp -r dist/* /var/www/html/
+            cd ..
+
+            echo "Deployment complete!"
+          ENDSSH
