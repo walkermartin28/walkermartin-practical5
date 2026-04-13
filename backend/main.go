@@ -1,5 +1,6 @@
 package main
 
+// SEC Baseball Hub API - Hello World Version
 import (
 	"encoding/json"
 	"log"
