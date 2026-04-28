@@ -961,3 +961,76 @@ func DeleteStanding(w http.ResponseWriter, r *http.Request) {
 
 	sendJSON(w, SuccessResponse{Success: true, Data: map[string]string{"message": "Standing deleted successfully"}}, http.StatusOK)
 }
+
+// ========================================
+// AUTH HANDLERS
+// ========================================
+
+const (
+	ADMIN_USERNAME = "admin"
+	ADMIN_PASSWORD = "SECbaseball2025!"
+	ADMIN_TOKEN    = "sec-baseball-admin-token"
+)
+
+// LoginRequest represents login credentials
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+// LoginResponse represents login response
+type LoginResponse struct {
+	Token   string `json:"token"`
+	Message string `json:"message"`
+}
+
+// VerifyResponse represents token verification response
+type VerifyResponse struct {
+	Valid bool `json:"valid"`
+}
+
+// Login handles POST /api/auth/login
+func Login(w http.ResponseWriter, r *http.Request) {
+	var req LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Check credentials
+	if req.Username == ADMIN_USERNAME && req.Password == ADMIN_PASSWORD {
+		response := LoginResponse{
+			Token:   ADMIN_TOKEN,
+			Message: "Login successful",
+		}
+		sendJSON(w, response, http.StatusOK)
+		return
+	}
+
+	sendError(w, "Invalid credentials", http.StatusUnauthorized)
+}
+
+// VerifyToken handles GET /api/auth/verify
+func VerifyToken(w http.ResponseWriter, r *http.Request) {
+	// Get Authorization header
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		sendError(w, "No authorization header", http.StatusUnauthorized)
+		return
+	}
+
+	// Check for Bearer token
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		sendError(w, "Invalid authorization format", http.StatusUnauthorized)
+		return
+	}
+
+	token := parts[1]
+	if token == ADMIN_TOKEN {
+		sendJSON(w, VerifyResponse{Valid: true}, http.StatusOK)
+		return
+	}
+
+	sendError(w, "Invalid token", http.StatusUnauthorized)
+}

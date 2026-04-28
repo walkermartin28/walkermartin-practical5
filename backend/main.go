@@ -156,6 +156,25 @@ func apiRouter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Auth endpoints
+	if strings.HasPrefix(path, "/api/auth") {
+		if path == "/api/auth/login" {
+			if method == "POST" {
+				Login(w, r)
+			} else {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+			return
+		} else if path == "/api/auth/verify" {
+			if method == "GET" {
+				VerifyToken(w, r)
+			} else {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+			return
+		}
+	}
+
 	// Not found
 	http.Error(w, "Endpoint not found", http.StatusNotFound)
 }
