@@ -13,6 +13,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Build Frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
+
       - name: Deploy to Lightsail
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -24,43 +35,54 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts
 
-          # Deploy via SSH
+          # Deploy backend via SSH
           ssh ubuntu@$SERVER_IP << 'ENDSSH'
             set -e
 
             # Set up environment
             export PATH=$PATH:/usr/local/go/bin
 
-            # Navigate to project directory
-            cd /home/ubuntu/walkermartin-practical4 || exit 1
+            # Navigate to project repository
+            cd /home/ubuntu/walkermartin-practical5 || exit 1
 
             # Pull latest code
+            echo "Pulling latest code from repository..."
             git pull origin main
 
-            # Build and restart backend
+            # Navigate to backend deployment directory
+            cd /home/ubuntu/backend
+
+            # Copy backend files from repo
+            echo "Copying backend files..."
+            cp -r /home/ubuntu/walkermartin-practical5/backend/* .
+
+            # Build backend
             echo "Building Go backend..."
-            cd backend
-            go build -o sec-baseball-hub main.go
+            go build -o sec-baseball-api
 
-            # Stop existing backend
-            pkill -9 -f sec-baseball-hub || true
-            sleep 1
+            # Restart backend service
+            echo "Restarting backend service..."
+            sudo systemctl restart sec-baseball
 
-            # Start new backend
-            nohup ./sec-baseball-hub > backend.log 2>&1 &
-            sleep 2
+            # Check service status
+            sudo systemctl status sec-baseball --no-pager
 
-            echo "Backend started successfully"
-            cd ..
-
-            # Build and deploy frontend
-            echo "Building React frontend..."
-            cd frontend
-            npm install
-            npm run build
-            sudo rm -rf /var/www/html/*
-            sudo cp -r dist/* /var/www/html/
-            cd ..
-
-            echo "Deployment complete!"
+            echo "Backend deployment complete!"
           ENDSSH
+
+          # Deploy frontend files
+          echo "Deploying frontend files..."
+          scp -i ~/.ssh/id_rsa -r frontend/dist/* ubuntu@$SERVER_IP:/tmp/frontend-dist/
+
+          ssh ubuntu@$SERVER_IP << 'ENDSSH'
+            # Move frontend files to web root
+            sudo rm -rf /var/www/html/*
+            sudo mv /tmp/frontend-dist/* /var/www/html/
+            sudo chown -R www-data:www-data /var/www/html
+            sudo chmod -R 755 /var/www/html
+            rm -rf /tmp/frontend-dist
+
+            echo "Frontend deployment complete!"
+          ENDSSH
+
+          echo "Deployment complete!"
